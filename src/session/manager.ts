@@ -13,6 +13,8 @@ import { PiRpcHost, type RpcSessionState } from "../rpc/host.ts";
 export interface SessionInfo {
   sessionId: string;
   sessionFile?: string;
+  /** 每会话独立工作区 id（宿主 cwd = <sessionWorkspacesDir>/<workspaceId>） */
+  workspaceId?: string;
 }
 
 interface HostEntry {
@@ -20,6 +22,8 @@ interface HostEntry {
   state: RpcSessionState;
   busy: boolean;
   lastActive: number;
+  /** 本会话独立工作区 id（cwd 隔离凭据） */
+  workspaceId: string;
 }
 export type { HostEntry };
 
@@ -47,6 +51,18 @@ export class SessionManager {
   private loaded = false;
   private sweeper: ReturnType<typeof setInterval> | null = null;
 
+  /** 生成新的会话工作区 id。 */
+  newWorkspaceId(): string {
+    return `ws_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+  }
+
+  /** 会话工作区目录（宿主 cwd），按需创建。 */
+  async workspacePath(workspaceId: string): Promise<string> {
+    const dir = join(config.sessionWorkspacesDir, workspaceId);
+    await mkdir(dir, { recursive: true });
+    return dir;
+  }
+
   async load(): Promise<void> {
     if (this.loaded) return;
     this.loaded = true;
@@ -55,7 +71,11 @@ export class SessionManager {
       const raw = JSON.parse(await readFile(this.mapFile, "utf8")) as Record<string, SessionInfo>;
       for (const [responseId, info] of Object.entries(raw)) {
         if (info && typeof info.sessionId === "string") {
-          this.mapping.set(responseId, { sessionId: info.sessionId, sessionFile: info.sessionFile });
+          this.mapping.set(responseId, {
+            sessionId: info.sessionId,
+            sessionFile: info.sessionFile,
+            workspaceId: info.workspaceId,
+          });
         }
       }
     } catch {
@@ -91,13 +111,22 @@ export class SessionManager {
    * - 已有进程且空闲 → 复用
    * - 已有进程但忙 → SessionBusyError
    * - 无进程 → 按 sessionFile 重开（新会话则不带 --session，由 pi 新建）
+   *
+   * 宿主 cwd 始终是该会话的独立工作区（<sessionWorkspacesDir>/<workspaceId>）。
+   * createNew 时缺省生成新 workspaceId；重开时缺省沿用映射里登记的值。
    */
-  async acquire(options: { sessionFile?: string; createNew: boolean }): Promise<HostEntry> {
-    // 新会话：直接拉起全新宿主
+  async acquire(options: {
+    sessionFile?: string;
+    createNew: boolean;
+    workspaceId?: string;
+  }): Promise<HostEntry> {
+    // 新会话：直接拉起全新宿主（新工作区）
     if (options.createNew) {
-      const host = new PiRpcHost();
+      const workspaceId = options.workspaceId ?? this.newWorkspaceId();
+      const cwd = await this.workspacePath(workspaceId);
+      const host = new PiRpcHost({ cwd });
       const state = await host.ready();
-      const entry: HostEntry = { host, state, busy: true, lastActive: Date.now() };
+      const entry: HostEntry = { host, state, busy: true, lastActive: Date.now(), workspaceId };
       this.hosts.set(state.sessionId, entry);
       host.events.on("exit", () => {
         if (this.hosts.get(state.sessionId)?.host === host) this.hosts.delete(state.sessionId);
@@ -115,10 +144,12 @@ export class SessionManager {
         return entry;
       }
     }
-    // 无活跃宿主：重开
-    const host = new PiRpcHost({ sessionFile: options.sessionFile });
+    // 无活跃宿主：重开（cwd 换到会话独立工作区；老条目无 workspaceId 时回退派生）
+    const workspaceId = options.workspaceId ?? fallbackWorkspaceId(options.sessionFile);
+    const cwd = await this.workspacePath(workspaceId);
+    const host = new PiRpcHost({ sessionFile: options.sessionFile, cwd });
     const state = await host.ready();
-    const entry: HostEntry = { host, state, busy: true, lastActive: Date.now() };
+    const entry: HostEntry = { host, state, busy: true, lastActive: Date.now(), workspaceId };
     this.hosts.set(state.sessionId, entry);
     host.events.on("exit", () => {
       if (this.hosts.get(state.sessionId)?.host === host) this.hosts.delete(state.sessionId);
@@ -169,4 +200,11 @@ export function newResponseId(): string {
 }
 export function newCompactionId(): string {
   return `cmp_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+}
+
+/** 旧映射条目（无 workspaceId）回退：从 sessionFile 路径派生稳定 id。 */
+export function fallbackWorkspaceId(sessionFile: string): string {
+  const stem = sessionFile.split("/").pop()?.replace(/\.[^.]*$/, "") ?? "legacy";
+  const safe = stem.replace(/[^A-Za-z0-9._-]/g, "_");
+  return `legacy_${safe.slice(-48)}`;
 }

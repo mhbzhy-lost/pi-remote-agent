@@ -58,7 +58,7 @@ export class PiRpcHost {
   exitError: RpcExitError | null = null;
   private waitReadyPromise: Promise<RpcSessionState> | null = null;
 
-  constructor(options: { sessionFile?: string } = {}) {
+  constructor(options: { sessionFile?: string; cwd?: string } = {}) {
     const args = [
       config.piCli,
       "--mode",
@@ -70,7 +70,7 @@ export class PiRpcHost {
       process.execPath,
       args,
       {
-        cwd: config.workspaceDir,
+        cwd: options.cwd ?? config.workspaceDir,
         env: {
           ...process.env,
           PI_CODING_AGENT_DIR: config.piAgentDir,
@@ -227,4 +227,5 @@ export interface RpcSessionState {
 export async function ensureSessionDir(): Promise<void> {
   await mkdir(config.sessionDir, { recursive: true });
   await mkdir(config.workspacesDir, { recursive: true });
+  await mkdir(config.sessionWorkspacesDir, { recursive: true });
 }

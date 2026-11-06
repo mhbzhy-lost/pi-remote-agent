@@ -34,7 +34,7 @@ POST /v1/responses/compact
 PI_REMOTE_AGENT_TOKEN=<token> npm start
 ```
 
-可选环境变量：`PI_REMOTE_AGENT_PORT`（默认 8787）、`PI_REMOTE_AGENT_HOST`（默认 127.0.0.1）、`PI_REMOTE_AGENT_WORKSPACE_DIR`（pi 宿主 cwd）、`PI_REMOTE_AGENT_SESSION_DIR`（默认 `var/sessions`）、`PI_REMOTE_AGENT_IDLE_MS`（空闲宿主回收，默认 10 分钟）。
+可选环境变量：`PI_REMOTE_AGENT_PORT`（默认 8787）、`PI_REMOTE_AGENT_HOST`（默认 127.0.0.1）、`PI_REMOTE_AGENT_SESSION_WORKSPACES_DIR`（每会话独立工作区根目录，默认 `var/session-workspaces`；每个会话的 pi 宿主 cwd 为其下的 `<workspaceId>` 子目录，会话间文件互不可见）、`PI_REMOTE_AGENT_WORKSPACE_DIR`（兜底 cwd，默认本仓库根，正常不会用到）、`PI_REMOTE_AGENT_SESSION_DIR`（默认 `var/sessions`）、`PI_REMOTE_AGENT_IDLE_MS`（空闲宿主回收，默认 10 分钟）。
 
 ## 开发
 

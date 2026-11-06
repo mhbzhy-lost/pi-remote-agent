@@ -5,7 +5,8 @@
  * - PI_REMOTE_AGENT_PORT   HTTP 端口（默认 8787）
  * - PI_REMOTE_AGENT_HOST   HTTP 监听地址（默认 127.0.0.1，仅本机）
  * - PI_REMOTE_AGENT_ROOT   本仓库根目录（默认取当前工作目录）
- * - PI_REMOTE_AGENT_WORKSPACE_DIR  pi 宿主进程的 cwd（默认本仓库根）
+ * - PI_REMOTE_AGENT_WORKSPACE_DIR  pi 宿主进程的兜底 cwd（默认本仓库根；每会话工作区启用后仅作回退）
+ * - PI_REMOTE_AGENT_SESSION_WORKSPACES_DIR  每会话独立工作区根目录（默认 <root>/var/session-workspaces）
  * - PI_REMOTE_AGENT_SESSION_DIR    pi 会话落盘目录（默认 <root>/var/sessions）
  * - PI_REMOTE_AGENT_IDLE_MS        RPC 宿主空闲回收阈值（默认 10 分钟）
  */
@@ -36,6 +37,12 @@ export const config = {
   },
   get workspaceDir(): string {
     return resolve(process.env.PI_REMOTE_AGENT_WORKSPACE_DIR ?? config.root);
+  },
+  /** 每会话独立工作区根目录（pi 宿主 cwd 按会话隔离） */
+  get sessionWorkspacesDir(): string {
+    return resolve(
+      process.env.PI_REMOTE_AGENT_SESSION_WORKSPACES_DIR ?? join(config.root, "var/session-workspaces"),
+    );
   },
   /** pi 会话落盘目录 */
   get sessionDir(): string {

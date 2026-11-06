@@ -154,7 +154,11 @@ async function handleResponses(res: ServerResponse, manager: SessionManager, bod
       entry = await manager.acquire({ createNew: true });
     } else {
       const session = manager.resolve(request.previousResponseId);
-      entry = await manager.acquire({ sessionFile: session.sessionFile, createNew: false });
+      entry = await manager.acquire({
+        sessionFile: session.sessionFile,
+        createNew: false,
+        workspaceId: session.workspaceId,
+      });
     }
   } catch (error) {
     if (error instanceof SessionNotFoundError) {
@@ -172,6 +176,7 @@ async function handleResponses(res: ServerResponse, manager: SessionManager, bod
   await manager.registerResponse(responseId, {
     sessionId: entry.state.sessionId,
     sessionFile: entry.state.sessionFile,
+    workspaceId: entry.workspaceId,
   });
 
   // ---- SSE 头 ----
@@ -274,7 +279,11 @@ async function handleCompact(res: ServerResponse, manager: SessionManager, body:
 
   let entry: HostEntry;
   try {
-    entry = await manager.acquire({ sessionFile: session.sessionFile, createNew: false });
+    entry = await manager.acquire({
+      sessionFile: session.sessionFile,
+      createNew: false,
+      workspaceId: session.workspaceId,
+    });
   } catch (error) {
     if (error instanceof SessionBusyError) {
       errorBody(res, 409, error.message, "invalid_request_error");

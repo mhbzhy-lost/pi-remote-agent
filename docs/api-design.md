@@ -116,6 +116,7 @@ POST /v1/responses/compact
 ## 进程与恢复模型
 
 - 每个 pi session 懒加载一个 RPC 子进程，空闲超时回收；收到新请求时若进程不存在则用 `--session <id>` 重开（pi 会话已落盘，上下文不丢）。
+- **每会话独立工作区**：宿主 cwd 为 `<sessionWorkspacesDir>/<workspaceId>`（workspaceId 随 `response.id → session` 映射落盘，新建会话时生成）；会话间文件互不可见，跨重开/压缩/网关重启保持同一目录。老映射条目无 workspaceId 时回退 `legacy_<sessionFile 名>` 派生 id。
 - compact 不换 session（已核实 pi 行为），无映射补偿。
 - 网关崩溃不影响会话持久性；`response.id → session` 映射需可重建（pi session 内含完整条目，重放可恢复）。
 - 钉钉机器人等具体来源的适配是后续独立模块（webhook 层），不在本定义范围内。
