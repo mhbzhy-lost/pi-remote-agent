@@ -1,0 +1,5 @@
+.opencode/
+node_modules/
+
+# 网关运行时数据
+var/

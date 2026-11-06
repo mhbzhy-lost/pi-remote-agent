@@ -1,0 +1,4 @@
+[submodule "pi-config"]
+	path = pi-config
+	url = https://github.com/mhbzhy-lost/pi-config.git
+	branch = main
