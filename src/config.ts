@@ -1,7 +1,7 @@
 /**
  * 网关配置：全部来自环境变量，未配置的给出缺省值。
  *
- * - PI_REMOTE_AGENT_TOKEN  鉴权 token（必配，未配置则拒绝所有请求）
+ * - PI_REMOTE_AGENT_TOKEN  非 loopback 请求的鉴权 token（未配置则拒绝需要鉴权的请求）
  * - PI_REMOTE_AGENT_PORT   HTTP 端口（默认 8787）
  * - PI_REMOTE_AGENT_HOST   HTTP 监听地址（默认 127.0.0.1，仅本机）
  * - PI_REMOTE_AGENT_ROOT   本仓库根目录（默认取当前工作目录）

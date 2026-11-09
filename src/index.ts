@@ -11,7 +11,7 @@ import { ensureSessionDir } from "./rpc/host.ts";
 
 async function main(): Promise<void> {
   if (!config.token) {
-    console.error("[gateway] PI_REMOTE_AGENT_TOKEN 未配置，网关将拒绝所有请求（仅供显式确认后本地测试）");
+    console.error("[gateway] PI_REMOTE_AGENT_TOKEN 未配置，仅真实 loopback 对端且未携带 Authorization 的请求可访问");
   }
   await ensureSessionDir();
   const manager = new SessionManager();

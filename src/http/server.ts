@@ -4,7 +4,7 @@
  * - POST /v1/responses        自然语言输入 → SSE 流式输出（不带 previous_response_id = 新会话）
  * - POST /v1/responses/compact 压缩会话 → CompactResource
  *
- * 鉴权：Authorization: Bearer <PI_REMOTE_AGENT_TOKEN>。
+ * 鉴权：真实 loopback 对端可省略 Authorization，否则要求 Bearer <PI_REMOTE_AGENT_TOKEN>。
  * 错误响应体：官方 ErrorResponse 形状 {"error":{message,type,...}}。
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -74,14 +74,19 @@ export function createGatewayServer(manager: SessionManager): ReturnType<typeof 
 
 async function handle(req: IncomingMessage, res: ServerResponse, manager: SessionManager): Promise<void> {
   // ---- 鉴权 ----
-  if (!config.token) {
-    errorBody(res, 503, "server token not configured (PI_REMOTE_AGENT_TOKEN)", "server_error");
-    return;
-  }
-  const auth = req.headers.authorization ?? "";
-  if (auth !== `Bearer ${config.token}`) {
-    errorBody(res, 401, "invalid or missing bearer token", "authentication_error");
-    return;
+  const peer = req.socket.remoteAddress;
+  const isLoopback = peer === "127.0.0.1" || peer === "::1" || peer === "::ffff:127.0.0.1";
+  // 仅真实 socket 对端为 loopback 且未携带鉴权头时免 token，不信任转发头。
+  if (!(isLoopback && req.headers.authorization === undefined)) {
+    if (!config.token) {
+      errorBody(res, 503, "server token not configured (PI_REMOTE_AGENT_TOKEN)", "server_error");
+      return;
+    }
+    const auth = req.headers.authorization ?? "";
+    if (auth !== `Bearer ${config.token}`) {
+      errorBody(res, 401, "invalid or missing bearer token", "authentication_error");
+      return;
+    }
   }
 
   const url = new URL(req.url ?? "/", "http://localhost");
