@@ -29,6 +29,7 @@
 
 ## Git 规范（本仓库）
 
+- git 工具优先用 `git1`（薄包装：设 `GIT_SSH_COMMAND=ssh1-launcher` 强制 SSH 走 ssh1-launcher，远程 URL 不变），不可用时回退 `git`。本环境 plain `git` 的 SSH 推送报「无法读取远程仓库」，须用 `git1`
 - commit：`type(scope): 中文祈使句`，无 AI 署名；author 用 mhbzhy-lost（GitHub noreply），**不要**用企业身份（全局 gitsync 钩子已通过仓库级 `core.hooksPath` 置空屏蔽）
 - 提交前敏感复扫：对将提交内容 grep 常见内部环境标识（内部 registry 域名、内网 IP 段、工位机主机名、企业邮箱后缀、员工花名）零命中
 
